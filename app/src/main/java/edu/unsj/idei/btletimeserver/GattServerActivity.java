@@ -1,7 +1,6 @@
 package edu.unsj.idei.btletimeserver;
 
-import androidx.appcompat.app.AppCompatActivity;
-
+import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGatt;
@@ -33,7 +32,7 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 
-public class GattServerActivity extends AppCompatActivity
+public class GattServerActivity extends Activity
 {
     private static final String TAG = GattServerActivity.class.getSimpleName();
 
@@ -50,7 +49,7 @@ public class GattServerActivity extends AppCompatActivity
     protected void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_server);
+        setContentView(R.layout.another_activity);
 
         mLocalTimeView = findViewById(R.id.text_time);
 

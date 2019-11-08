@@ -34,7 +34,6 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Locale;
-import java.util.Objects;
 import java.util.Set;
 
 public class GattServerActivity extends Activity implements SensorEventListener
@@ -197,6 +196,7 @@ public class GattServerActivity extends Activity implements SensorEventListener
 		@Override
 		public void onReceive(Context context, Intent intent)
 		{
+			/*
 			byte adjustReason;
 			switch (Objects.requireNonNull(intent.getAction()))
 			{
@@ -211,8 +211,9 @@ public class GattServerActivity extends Activity implements SensorEventListener
 					adjustReason = TimeProfile.ADJUST_NONE;
 					break;
 			}
+			 */
 			long now = System.currentTimeMillis();
-			notifyRegisteredDevices(now, adjustReason);
+			// notifyRegisteredDevices(now, adjustReason);
 			updateLocalUi(now);
 		}
 	};
@@ -270,12 +271,12 @@ public class GattServerActivity extends Activity implements SensorEventListener
 
 		AdvertiseData data = new AdvertiseData.Builder()
 				.setIncludeDeviceName(true)
-				.setIncludeTxPowerLevel(false)
-				.addServiceUuid(new ParcelUuid(TimeProfile.TIME_SERVICE))
+				.setIncludeTxPowerLevel(true)
+				//.addServiceUuid(new ParcelUuid(TimeProfile.TIME_SERVICE))
+				.addServiceUuid(new ParcelUuid(TimeProfile.ORIENTATION_SERVICE))
 				.build();
 
-		mBluetoothLeAdvertiser
-				.startAdvertising(settings, data, mAdvertiseCallback);
+		mBluetoothLeAdvertiser.startAdvertising(settings, data, mAdvertiseCallback);
 	}
 
 	/**
@@ -301,7 +302,8 @@ public class GattServerActivity extends Activity implements SensorEventListener
 			return;
 		}
 
-		mBluetoothGattServer.addService(TimeProfile.createTimeService());
+		//mBluetoothGattServer.addService(TimeProfile.createTimeService());
+		mBluetoothGattServer.addService(TimeProfile.createOrientationService());
 
 		// Initialize the local UI
 		updateLocalUi(System.currentTimeMillis());
@@ -335,10 +337,11 @@ public class GattServerActivity extends Activity implements SensorEventListener
 		}
 	};
 
-	/**
+	/*
 	 * Send a time service notification to any devices that are subscribed
 	 * to the characteristic.
 	 */
+	/*
 	private void notifyRegisteredDevices(long timestamp, byte adjustReason)
 	{
 		if (mRegisteredDevices.isEmpty())
@@ -351,13 +354,17 @@ public class GattServerActivity extends Activity implements SensorEventListener
 		Log.i(TAG, "Sending update to " + mRegisteredDevices.size() + " subscribers");
 		for (BluetoothDevice device : mRegisteredDevices)
 		{
+			//BluetoothGattCharacteristic timeCharacteristic = mBluetoothGattServer
+			//		.getService(TimeProfile.TIME_SERVICE)
+			//		.getCharacteristic(TimeProfile.CURRENT_TIME);
 			BluetoothGattCharacteristic timeCharacteristic = mBluetoothGattServer
-					.getService(TimeProfile.TIME_SERVICE)
-					.getCharacteristic(TimeProfile.CURRENT_TIME);
+					.getService(TimeProfile.ORIENTATION_SERVICE)
+					.getCharacteristic(TimeProfile.ORIENTATION_DATA);
 			timeCharacteristic.setValue(exactTime);
 			mBluetoothGattServer.notifyCharacteristicChanged(device, timeCharacteristic, false);
 		}
 	}
+	*/
 
 	/**
 	 * Update graphical UI on devices that support it with the current time.
@@ -377,7 +384,6 @@ public class GattServerActivity extends Activity implements SensorEventListener
 	 */
 	private BluetoothGattServerCallback mGattServerCallback = new BluetoothGattServerCallback()
 	{
-
 		@Override
 		public void onConnectionStateChange(BluetoothDevice device, int status, int newState)
 		{
@@ -396,6 +402,7 @@ public class GattServerActivity extends Activity implements SensorEventListener
 		public void onCharacteristicReadRequest(BluetoothDevice device, int requestId, int offset,
 		                                        BluetoothGattCharacteristic characteristic)
 		{
+			/*
 			long now = System.currentTimeMillis();
 			if (TimeProfile.CURRENT_TIME.equals(characteristic.getUuid()))
 			{
@@ -413,6 +420,16 @@ public class GattServerActivity extends Activity implements SensorEventListener
 						BluetoothGatt.GATT_SUCCESS,
 						0,
 						TimeProfile.getLocalTimeInfo(now));
+			} else
+			 */
+			if (TimeProfile.ORIENTATION_DATA.equals(characteristic.getUuid()))
+			{
+				Log.i(TAG, "Read device orientation");
+				mBluetoothGattServer.sendResponse(device,
+						requestId,
+						BluetoothGatt.GATT_SUCCESS,
+						0,
+						TimeProfile.getDeviceOrientation(new short[6]));
 			} else
 			{
 				// Invalid characteristic
@@ -494,6 +511,10 @@ public class GattServerActivity extends Activity implements SensorEventListener
 		}
 	};
 
+	private long curTime;
+	private short[] sumOrientation = new short[3];
+	private short sumOrientationQty = 0;
+
 	@Override
 	public void onSensorChanged(SensorEvent event)
 	{
@@ -504,40 +525,67 @@ public class GattServerActivity extends Activity implements SensorEventListener
 		{
 			System.arraycopy(event.values, 0, magnetometerReading, 0, magnetometerReading.length);
 		}
-		updateOrientationAngles();
+
+		/*
+		 * Compute the three orientation angles based on the most recent readings from the device's
+		 * accelerometer and magnetometer.
+		 */
+		// Update rotation matrix, which is needed to update orientation angles.
+		SensorManager.getRotationMatrix(rotationMatrix, null, accelerometerReading, magnetometerReading);
+		// "mRotationMatrix" now has up-to-date information.
+		SensorManager.getOrientation(rotationMatrix, orientationAngles);
+		// "mOrientationAngles" now has up-to-date information.
+
+		sumOrientation[0] += convert(orientationAngles[0]);
+		sumOrientation[1] += convert(orientationAngles[1]);
+		sumOrientation[2] += convert(orientationAngles[2]);
+		sumOrientationQty++;
+
+		long cur = System.currentTimeMillis();
+
+		if ((cur - curTime) > 500)
+		{
+			curTime = cur;
+
+			short[] orientation = new short[3];
+			orientation[0] = (short) (sumOrientation[0] / sumOrientationQty);
+			orientation[1] = (short) (sumOrientation[1] / sumOrientationQty);
+			orientation[2] = (short) (sumOrientation[1] / sumOrientationQty);
+			sumOrientationQty = 0;
+			sumOrientation[0] = 0;
+			sumOrientation[1] = 0;
+			sumOrientation[2] = 0;
+
+			String info = String.format(Locale.getDefault(), "Sent (%3d,%3d,%3d) to %d subscribers",
+					orientation[0], orientation[1], orientation[2], mRegisteredDevices.size());
+
+			//Log.i(TAG, info);
+			RotationView.setText(info);
+
+			if (mRegisteredDevices.size() > 0)
+			{
+				Log.i(TAG, "Sending " + info + " to " + mRegisteredDevices.size() + " subscribers");
+			}
+			for (BluetoothDevice device : mRegisteredDevices)
+			{
+				BluetoothGattCharacteristic timeCharacteristic = mBluetoothGattServer
+						.getService(TimeProfile.ORIENTATION_SERVICE)
+						.getCharacteristic(TimeProfile.ORIENTATION_DATA);
+				timeCharacteristic.setValue(TimeProfile.getDeviceOrientation(orientation));
+				mBluetoothGattServer.notifyCharacteristicChanged(device, timeCharacteristic, false);
+			}
+		}
 	}
 
 	private short convert(float value)
 	{
-		double deg = Math.floor(Math.toDegrees(value));
+		double deg = Math.ceil(Math.toDegrees(value));
 		if (deg < 0)
 		{
 			deg += 360;
 		}
 
 		return (short) Math.abs(deg);
-	}
-
-	/**
-	 * Compute the three orientation angles based on the most recent readings from the device's
-	 * accelerometer and magnetometer.
-	 */
-	public void updateOrientationAngles()
-	{
-		// Update rotation matrix, which is needed to update orientation angles.
-		SensorManager.getRotationMatrix(rotationMatrix, null, accelerometerReading, magnetometerReading);
-		// "mRotationMatrix" now has up-to-date information.
-		SensorManager.getOrientation(rotationMatrix, orientationAngles);
-		// "mOrientationAngles" now has up-to-date information.
-		short[] orientation = new short[3];
-		orientation[0] = convert(orientationAngles[0]);
-		orientation[1] = convert(orientationAngles[1]);
-		orientation[2] = convert(orientationAngles[2]);
-
-		Log.i(TAG, String.format("(% 3d,% 3d,% 3d)", orientation[0], orientation[1], orientation[2]));
-
-		RotationView.setText(String.format(Locale.getDefault(),	"Devide rotation: (%3d,%3d,%3d)",
-				orientation[0], orientation[1], orientation[2]));
 	}
 
 	@Override

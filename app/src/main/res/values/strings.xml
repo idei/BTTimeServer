@@ -2,5 +2,6 @@
     <string name="app_name">GATT Time Server</string>
     <string name="default_text">The current time</string>
     <string name="logo">Instituto de Informática</string>
+    <string name="rotationText">Device rotation (Z, X, Y): (270, 210, 110)</string>
     <string name="about"><b>What do this?</b>\nThis application is an example that runs a Low Energy Bluetooth Server that sends the current device time.</string>
 </resources>

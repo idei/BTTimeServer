@@ -34,14 +34,13 @@ public class TimeProfile
 	private static final String TAG = TimeProfile.class.getSimpleName();
 
 	/* Current Time Service UUID */
-	//static UUID TIME_SERVICE = UUID.fromString("00001805-0000-1000-8000-00805f9b34fb");
+	static UUID TIME_SERVICE = UUID.fromString("00001805-0000-1000-8000-00805f9b34fb");
 	/* Mandatory Current Time Information Characteristic */
-	//static UUID CURRENT_TIME = UUID.fromString("00002a2b-0000-1000-8000-00805f9b34fb");
+	static UUID CURRENT_TIME = UUID.fromString("00002a2b-0000-1000-8000-00805f9b34fb");
 	/* Optional Local Time Information Characteristic */
-	//static UUID LOCAL_TIME_INFO = UUID.fromString("00002a0f-0000-1000-8000-00805f9b34fb");
+	static UUID LOCAL_TIME_INFO = UUID.fromString("00002a0f-0000-1000-8000-00805f9b34fb");
 	/* Mandatory Client Characteristic Config Descriptor */
 	static UUID CLIENT_CONFIG = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb");
-
 	static UUID ORIENTATION_SERVICE = UUID.fromString("00001821-0000-1000-8000-00805f9b34fb");
 	static UUID ORIENTATION_DATA = UUID.fromString("A0E8C677-B42B-43FB-9710-8AC0AB24B3BB");
 	//static UUID ORIENTATION_CONFIG = UUID.fromString("C9B63447-94C8-4B0B-89F2-71F19F37D6FA");
@@ -53,29 +52,32 @@ public class TimeProfile
 	static final byte ADJUST_TIMEZONE = 0x4;
 	public static final byte ADJUST_DST = 0x8;
 
-	/**
+	/*
 	 * Return a configured {@link BluetoothGattService} instance for the
 	 * Current Time Service.
 	 */
-	/*
+
 	static BluetoothGattService createTimeService()
 	{
-		BluetoothGattService service = new BluetoothGattService(TIME_SERVICE,
-				BluetoothGattService.SERVICE_TYPE_PRIMARY);
+		// Start a new service
+		BluetoothGattService service = new BluetoothGattService(
+				TIME_SERVICE, BluetoothGattService.SERVICE_TYPE_PRIMARY);
 
-		// Current Time characteristic
-		BluetoothGattCharacteristic currentTime = new BluetoothGattCharacteristic(CURRENT_TIME,
-				//Read-only characteristic, supports notifications
+		// Configure the Current Time characteristic as Read-only and for supporting notifications
+		BluetoothGattCharacteristic currentTime = new BluetoothGattCharacteristic(
+				CURRENT_TIME,
 				BluetoothGattCharacteristic.PROPERTY_READ | BluetoothGattCharacteristic.PROPERTY_NOTIFY,
 				BluetoothGattCharacteristic.PERMISSION_READ);
-		BluetoothGattDescriptor configDescriptor = new BluetoothGattDescriptor(CLIENT_CONFIG,
-				//Read/write descriptor
+
+		// Describe the current time characteristic with a Read/write descriptor
+		BluetoothGattDescriptor configDescriptor = new BluetoothGattDescriptor(
+				CLIENT_CONFIG,
 				BluetoothGattDescriptor.PERMISSION_READ | BluetoothGattDescriptor.PERMISSION_WRITE);
 		currentTime.addDescriptor(configDescriptor);
 
-		// Local Time Information characteristic
-		BluetoothGattCharacteristic localTime = new BluetoothGattCharacteristic(LOCAL_TIME_INFO,
-				//Read-only characteristic
+		// Configure the Local Time Information characteristic as read-only
+		BluetoothGattCharacteristic localTime = new BluetoothGattCharacteristic(
+				LOCAL_TIME_INFO,
 				BluetoothGattCharacteristic.PROPERTY_READ,
 				BluetoothGattCharacteristic.PERMISSION_READ);
 
@@ -84,14 +86,13 @@ public class TimeProfile
 
 		return service;
 	}
-	*/
+
 
 	/**
 	 * Return a configured {@link BluetoothGattService} instance for the Device Orientation.
 	 *
 	 * @return The new orientation service.
 	 */
-
 	static BluetoothGattService createOrientationService()
 	{
 		BluetoothGattService service = new BluetoothGattService(ORIENTATION_SERVICE,

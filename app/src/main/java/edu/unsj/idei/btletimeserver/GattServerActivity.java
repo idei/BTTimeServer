@@ -19,10 +19,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
-import android.hardware.Sensor;
-import android.hardware.SensorEvent;
-import android.hardware.SensorEventListener;
-import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.os.ParcelUuid;
 import android.text.format.DateFormat;
@@ -33,10 +29,9 @@ import android.widget.TextView;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashSet;
-import java.util.Locale;
 import java.util.Set;
 
-public class GattServerActivity extends Activity implements SensorEventListener
+public class GattServerActivity extends Activity // implements SensorEventListener
 {
 	private static final String TAG = GattServerActivity.class.getSimpleName();
 
@@ -50,13 +45,6 @@ public class GattServerActivity extends Activity implements SensorEventListener
 	/* Collection of notification subscribers */
 	private Set<BluetoothDevice> mRegisteredDevices = new HashSet<>();
 
-	private SensorManager sensorManager;
-	private final float[] accelerometerReading = new float[3];
-	private final float[] magnetometerReading = new float[3];
-
-	private final float[] rotationMatrix = new float[9];
-	private final float[] orientationAngles = new float[3];
-
 	@Override
 	protected void onCreate(Bundle savedInstanceState)
 	{
@@ -69,7 +57,8 @@ public class GattServerActivity extends Activity implements SensorEventListener
 		// Devices with a display should not go to sleep
 		getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
-		sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+		//sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+
 		mBluetoothManager = (BluetoothManager) getSystemService(BLUETOOTH_SERVICE);
 		assert mBluetoothManager != null;
 		BluetoothAdapter bluetoothAdapter = mBluetoothManager.getAdapter();
@@ -106,6 +95,8 @@ public class GattServerActivity extends Activity implements SensorEventListener
 		// In this example, the sensor reporting delay is small enough such that
 		// the application receives an update before the system checks the sensor
 		// readings again.
+
+		/*
 		Sensor accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
 		if (accelerometer != null)
 		{
@@ -118,15 +109,15 @@ public class GattServerActivity extends Activity implements SensorEventListener
 			sensorManager.registerListener(this, magneticField,
 					SensorManager.SENSOR_DELAY_NORMAL, SensorManager.SENSOR_DELAY_UI);
 		}
+		*/
 	}
 
 	@Override
 	protected void onPause()
 	{
 		super.onPause();
-
 		// Don't receive any more updates from either sensor.
-		sensorManager.unregisterListener(this);
+		// sensorManager.unregisterListener(this);
 	}
 
 	@Override
@@ -249,8 +240,8 @@ public class GattServerActivity extends Activity implements SensorEventListener
 	};
 
 	/**
-	 * Begin advertising over Bluetooth that this device is connectable
-	 * and supports the Current Time Service.
+	 * Begin advertising over Bluetooth that this device is connectable and supports the Message
+	 * Service.
 	 */
 	private void startAdvertising()
 	{
@@ -272,8 +263,7 @@ public class GattServerActivity extends Activity implements SensorEventListener
 		AdvertiseData data = new AdvertiseData.Builder()
 				.setIncludeDeviceName(true)
 				.setIncludeTxPowerLevel(true)
-				//.addServiceUuid(new ParcelUuid(TimeProfile.TIME_SERVICE))
-				.addServiceUuid(new ParcelUuid(TimeProfile.ORIENTATION_SERVICE))
+				.addServiceUuid(new ParcelUuid(ChatProfile.MESSAGE_SERVICE))
 				.build();
 
 		mBluetoothLeAdvertiser.startAdvertising(settings, data, mAdvertiseCallback);
@@ -302,9 +292,8 @@ public class GattServerActivity extends Activity implements SensorEventListener
 			return;
 		}
 
-		//mBluetoothGattServer.addService(TimeProfile.createTimeService());
-		mBluetoothGattServer.addService(TimeProfile.createOrientationService());
-
+		// mBluetoothGattServer.addService(TimeProfile.createOrientationService());
+		mBluetoothGattServer.addService(ChatProfile.createChatService());
 		// Initialize the local UI
 		updateLocalUi(System.currentTimeMillis());
 	}
@@ -389,12 +378,48 @@ public class GattServerActivity extends Activity implements SensorEventListener
 		{
 			if (newState == BluetoothProfile.STATE_CONNECTED)
 			{
-				Log.i(TAG, "BluetoothDevice CONNECTED: " + device);
+				Log.i(TAG, "Device CONNECTED: " + device);
 			} else if (newState == BluetoothProfile.STATE_DISCONNECTED)
 			{
-				Log.i(TAG, "BluetoothDevice DISCONNECTED: " + device);
+				Log.i(TAG, "Device DISCONNECTED: " + device);
 				//Remove device from any active subscriptions
 				mRegisteredDevices.remove(device);
+			}
+		}
+
+		@Override
+		public void onCharacteristicWriteRequest(BluetoothDevice device, int requestId,
+		                                         BluetoothGattCharacteristic characteristic,
+		                                         boolean preparedWrite, boolean responseNeeded,
+		                                         int offset, byte[] value)
+		{
+			String txt = new String(value);
+
+			if (ChatProfile.PRIVATE_MESSAGE_CHARACTERISTIC.equals(characteristic.getUuid()))
+			{
+				Log.i(TAG, String.format("Private from %s: '%s' (%d)", device.getAddress(), txt, requestId));
+			} else
+			{
+				if (mRegisteredDevices.size() > 0)
+				{
+					Log.i(TAG, String.format("Broadcast from %s: '%s' (%d)", device.getAddress(), txt, requestId));
+				} else
+				{
+					Log.i(TAG, "No registered listeners");
+				}
+				for (BluetoothDevice dev : mRegisteredDevices)
+				{
+					BluetoothGattCharacteristic broadcastCharacteristic = mBluetoothGattServer
+							.getService(ChatProfile.MESSAGE_SERVICE)
+							.getCharacteristic(ChatProfile.NOTIFICATION_MESSAGE_CHARACTERISTIC);
+					broadcastCharacteristic.setValue(value);
+					mBluetoothGattServer.notifyCharacteristicChanged(dev, broadcastCharacteristic, false);
+				}
+			}
+
+			if (responseNeeded)
+			{
+				mBluetoothGattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 0, null);
 			}
 		}
 
@@ -421,7 +446,7 @@ public class GattServerActivity extends Activity implements SensorEventListener
 						0,
 						TimeProfile.getLocalTimeInfo(now));
 			} else
-			 */
+
 			if (TimeProfile.ORIENTATION_DATA.equals(characteristic.getUuid()))
 			{
 				Log.i(TAG, "Read device orientation");
@@ -440,13 +465,14 @@ public class GattServerActivity extends Activity implements SensorEventListener
 						0,
 						null);
 			}
+			*/
 		}
 
 		@Override
 		public void onDescriptorReadRequest(BluetoothDevice device, int requestId, int offset,
 		                                    BluetoothGattDescriptor descriptor)
 		{
-			if (TimeProfile.CLIENT_CONFIG.equals(descriptor.getUuid()))
+			if (ChatProfile.CLIENT_CHARACTERISTIC_CONFIG_DESCRIPTOR.equals(descriptor.getUuid()))
 			{
 				Log.d(TAG, "Config descriptor read");
 				byte[] returnValue;
@@ -476,7 +502,7 @@ public class GattServerActivity extends Activity implements SensorEventListener
 		                                     boolean preparedWrite, boolean responseNeeded,
 		                                     int offset, byte[] value)
 		{
-			if (TimeProfile.CLIENT_CONFIG.equals(descriptor.getUuid()))
+			if (ChatProfile.CLIENT_CHARACTERISTIC_CONFIG_DESCRIPTOR.equals(descriptor.getUuid()))
 			{
 				if (Arrays.equals(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE, value))
 				{
@@ -511,6 +537,14 @@ public class GattServerActivity extends Activity implements SensorEventListener
 		}
 	};
 
+	/*
+	private SensorManager sensorManager;
+	private final float[] accelerometerReading = new float[3];
+	private final float[] magnetometerReading = new float[3];
+
+	private final float[] rotationMatrix = new float[9];
+	private final float[] orientationAngles = new float[3];
+
 	private long curTime;
 	private short[] sumOrientation = new short[3];
 	private short sumOrientationQty = 0;
@@ -526,10 +560,8 @@ public class GattServerActivity extends Activity implements SensorEventListener
 			System.arraycopy(event.values, 0, magnetometerReading, 0, magnetometerReading.length);
 		}
 
-		/*
-		 * Compute the three orientation angles based on the most recent readings from the device's
-		 * accelerometer and magnetometer.
-		 */
+		// Compute the three orientation angles based on the most recent readings from the device's
+		// accelerometer and magnetometer.
 		// Update rotation matrix, which is needed to update orientation angles.
 		SensorManager.getRotationMatrix(rotationMatrix, null, accelerometerReading, magnetometerReading);
 		// "mRotationMatrix" now has up-to-date information.
@@ -593,4 +625,5 @@ public class GattServerActivity extends Activity implements SensorEventListener
 	{
 
 	}
+	*/
 }

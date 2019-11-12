@@ -37,7 +37,6 @@ public class GattServerActivity extends Activity // implements SensorEventListen
 
 	/* Local UI */
 	private TextView mLocalTimeView;
-	private TextView RotationView;
 	/* Bluetooth API */
 	private BluetoothManager mBluetoothManager;
 	private BluetoothGattServer mBluetoothGattServer;
@@ -52,7 +51,6 @@ public class GattServerActivity extends Activity // implements SensorEventListen
 		setContentView(R.layout.another_activity);
 
 		mLocalTimeView = findViewById(R.id.text_time);
-		RotationView = findViewById(R.id.rotation);
 
 		// Devices with a display should not go to sleep
 		getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -205,7 +203,6 @@ public class GattServerActivity extends Activity // implements SensorEventListen
 			 */
 			long now = System.currentTimeMillis();
 			// notifyRegisteredDevices(now, adjustReason);
-			updateLocalUi(now);
 		}
 	};
 
@@ -246,6 +243,7 @@ public class GattServerActivity extends Activity // implements SensorEventListen
 	private void startAdvertising()
 	{
 		BluetoothAdapter bluetoothAdapter = mBluetoothManager.getAdapter();
+		bluetoothAdapter.setName("Popito");
 		mBluetoothLeAdvertiser = bluetoothAdapter.getBluetoothLeAdvertiser();
 		if (mBluetoothLeAdvertiser == null)
 		{
@@ -295,7 +293,6 @@ public class GattServerActivity extends Activity // implements SensorEventListen
 		// mBluetoothGattServer.addService(TimeProfile.createOrientationService());
 		mBluetoothGattServer.addService(ChatProfile.createChatService());
 		// Initialize the local UI
-		updateLocalUi(System.currentTimeMillis());
 	}
 
 	/**
@@ -354,18 +351,6 @@ public class GattServerActivity extends Activity // implements SensorEventListen
 		}
 	}
 	*/
-
-	/**
-	 * Update graphical UI on devices that support it with the current time.
-	 */
-	private void updateLocalUi(long timestamp)
-	{
-		Date date = new Date(timestamp);
-		String displayDate = DateFormat.getMediumDateFormat(this).format(date)
-				+ "\n"
-				+ DateFormat.getTimeFormat(this).format(date);
-		mLocalTimeView.setText(displayDate);
-	}
 
 	/**
 	 * Callback to handle incoming requests to the GATT server.

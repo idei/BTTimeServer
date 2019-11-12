@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Servidor Bluetooth de posición</string>
-    <string name="default_text">Hora actual</string>
+    <string name="default_text">Mensaje</string>
     <string name="logo">Instituto de Informática</string>
-    <string name="rotationText">Rotación (Z, X, Y): (270, 210, 110)</string>
+    <string name="rotationText">Público:</string>
+    <string name="sendButton">Enviar</string>
+    <string name="isPublic">Público</string>
     <string name="about"><b>¿Qué hace esta aplicación?</b>\nEsta aplicación es un ejemplo de servicio de Bluetooth de Baja Energía que notifica la orientación y geolocalización del dispositivo.</string>
 </resources>

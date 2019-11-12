@@ -1,12 +1,20 @@
 <resources>
-    <string name="app_name">GATT Time Server</string>
+    <string name="app_name">Argucia</string>
     <string name="default_text">Message</string>
     <string name="logo">Institute of Informatics</string>
     <string name="rotationText">Public:</string>
     <string name="sendButton">Send</string>
     <string name="isPublic">Public</string>
     <string name="about"><b>What do this?</b>\nThis application is an example that runs a Low Energy Bluetooth Server that sends the current device orientation and geolocalization.</string>
-    <string name="title_activity_chat_main">ChatMainActivity</string>
-    <string name="tab_text_1">Tab 1</string>
-    <string name="tab_text_2">Tab 2</string>
+    <string name="title_activity_nearest_peers">Nearest Players</string>
+    <string name="action_settings">Settings</string>
+    <string name="connect_button">Connect</string>
+    <string name="disconnect_button">Disconnect</string>
+    <string name="peer_name">Peer name</string>
+    <string name="ble_not_supported">Low Energy Bluetooth is not supported by this device</string>
+    <string name="error_bluetooth_not_supported">Bluetooth is not supported by this device</string>
+    <string name="location_permission_required">The permission to get BLE location data is required</string>
+    <string name="location_permission_granted">Location permissions already granted</string>
+    <string name="my_user_name">User name</string>
+    <string name="user_prefix">Jugador %d</string>
 </resources>

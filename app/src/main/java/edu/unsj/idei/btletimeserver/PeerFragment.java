@@ -22,14 +22,16 @@ import android.widget.TextView;
  */
 public class PeerFragment extends Fragment
 {
-	// TODO: Rename parameter arguments, choose names that match
 	// the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
-	private static final String ARG_PARAM1 = "param1";
-	private static final String ARG_PARAM2 = "param2";
+	private static final String ARG_NAME = "name";
+	private static final String ARG_ADDRESS = "address";
+	private static final String ARG_RSSI = "rssi";
 
-	// TODO: Rename and change types of parameters
-	private String mParam1;
-	private String mParam2;
+	private String _sName;
+	private String _sAddress;
+	private int _iRSSI;
+
+	private View view;
 
 	private OnFragmentInteractionListener mListener;
 
@@ -41,17 +43,17 @@ public class PeerFragment extends Fragment
 	 * Use this factory method to create a new instance of
 	 * this fragment using the provided parameters.
 	 *
-	 * @param param1 Parameter 1.
-	 * @param param2 Parameter 2.
+	 * @param deviceName    Parameter 1.
+	 * @param deviceAddress Parameter 2.
 	 * @return A new instance of fragment PeerFragment.
 	 */
-	// TODO: Rename and change types and number of parameters
-	public static PeerFragment newInstance(String param1, String param2)
+	static PeerFragment newInstance(String deviceName, String deviceAddress, int RSSI)
 	{
 		PeerFragment fragment = new PeerFragment();
 		Bundle args = new Bundle();
-		args.putString(ARG_PARAM1, param1);
-		args.putString(ARG_PARAM2, param2);
+		args.putString(ARG_NAME, deviceName);
+		args.putString(ARG_ADDRESS, deviceAddress);
+		args.putInt(ARG_RSSI, RSSI);
 		fragment.setArguments(args);
 		return fragment;
 	}
@@ -62,8 +64,9 @@ public class PeerFragment extends Fragment
 		super.onCreate(savedInstanceState);
 		if (getArguments() != null)
 		{
-			mParam1 = getArguments().getString(ARG_PARAM1);
-			mParam2 = getArguments().getString(ARG_PARAM2);
+			_sName = getArguments().getString(ARG_NAME);
+			_sAddress = getArguments().getString(ARG_ADDRESS);
+			_iRSSI = getArguments().getInt(ARG_RSSI);
 		}
 	}
 
@@ -72,11 +75,32 @@ public class PeerFragment extends Fragment
 	                         Bundle savedInstanceState)
 	{
 		// Inflate the layout for this fragment
-		View view = inflater.inflate(R.layout.fragment_peer, container, false);
+		view = inflater.inflate(R.layout.fragment_peer, container, false);
 		TextView peerName = view.findViewById(R.id.peer_name);
-		peerName.setText(mParam1);
+		peerName.setText(_sName);
+		setArgAddress(_sAddress);
+		setArgRssi(_iRSSI);
 		return view;
 	}
+
+	void setArgAddress(String address)
+	{
+		if (view != null)
+		{
+			TextView peerAddress = view.findViewById(R.id.peer_address);
+			peerAddress.setText(address);
+		}
+	}
+
+	void setArgRssi(int rssi)
+	{
+		if (view != null)
+		{
+			TextView peerRSSI = view.findViewById(R.id.peer_rssi);
+			peerRSSI.setText(rssi + "");
+		}
+	}
+
 
 	// TODO: Rename method, update argument and hook method into UI event
 	public void onButtonPressed(Uri uri)

@@ -14,7 +14,10 @@ import android.bluetooth.le.AdvertiseCallback;
 import android.bluetooth.le.AdvertiseData;
 import android.bluetooth.le.AdvertiseSettings;
 import android.bluetooth.le.BluetoothLeAdvertiser;
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
@@ -29,37 +32,57 @@ import androidx.core.content.ContextCompat;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 
-import android.os.Handler;
 import android.os.ParcelUuid;
 import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
 
 public class NearestPeersActivity extends AppCompatActivity implements PeerFragment.OnFragmentInteractionListener
 {
-	private static final String TAG = NearestPeersActivity.class.getSimpleName();
+	public static final String TAG = NearestPeersActivity.class.getSimpleName();
 	/* Bluetooth API */
 	private BluetoothManager mBluetoothManager;
 	private BluetoothGattServer mBluetoothGattServer;
 	private BluetoothLeAdvertiser mBluetoothLeAdvertiser;
 	private BluetoothAdapter mBluetoothAdapter;
-	private boolean mScanning;
-	private Handler mHandler;
 	/* Collection of notification subscribers */
 	private Set<BluetoothDevice> mRegisteredDevices = new HashSet<>();
-	private static final int REQUEST_ENABLE_BT = 1;
 	// Stops scanning after 10 seconds.
-	private static final long SCAN_PERIOD = 120000;
-	private LinearLayout peer_list;
+
+	private HashMap<String, PeerFragment> _peersView = new HashMap<>();
+
+	private NearestScanner scanner;
+
+	private NearestScanner.NearestCallback _nearestCallback = new NearestScanner.NearestCallback()
+	{
+		@Override
+		void found(NearestScanner.BTLeDevice device)
+		{
+			// Log.w(TAG, "Found " + device.getName());
+			addView(device);
+		}
+
+		@Override
+		void lost(NearestScanner.BTLeDevice device)
+		{
+			// Log.w(TAG, "Lost " + device.getName());
+			removeView(device);
+		}
+
+		@Override
+		void update(NearestScanner.BTLeDevice device)
+		{
+			updateView(device);
+		}
+	};
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState)
@@ -67,8 +90,6 @@ public class NearestPeersActivity extends AppCompatActivity implements PeerFragm
 		super.onCreate(savedInstanceState);
 		// Devices with a display should not go to sleep
 		getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-
-		mHandler = new Handler();
 
 		setContentView(R.layout.activity_nearest_peers);
 		Toolbar toolbar = findViewById(R.id.toolbar);
@@ -110,7 +131,9 @@ public class NearestPeersActivity extends AppCompatActivity implements PeerFragm
 		}
 
 		mBluetoothManager = (BluetoothManager) getSystemService(BLUETOOTH_SERVICE);
-
+		// Register for system Bluetooth events
+		IntentFilter filter = new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED);
+		registerReceiver(mBluetoothReceiver, filter);
 		// Initializes a Bluetooth adapter.  For API level 18 and above, get a reference to
 		// BluetoothAdapter through BluetoothManager.
 		final BluetoothManager bluetoothManager =
@@ -125,80 +148,93 @@ public class NearestPeersActivity extends AppCompatActivity implements PeerFragm
 			finish();
 		}
 
-		scanLeDevice(true);
+		scanner = NearestScanner.getInstance(mBluetoothAdapter.getBluetoothLeScanner(), _nearestCallback);
+		scanner.start();
 		startAdvertising();
 		startServer();
 	}
 
-	private ArrayList<String> devices = new ArrayList<>();
-
-	// Device scan callback.
-	private BluetoothAdapter.LeScanCallback mLeScanCallback =
-			new BluetoothAdapter.LeScanCallback()
-			{
-
-				@Override
-				public void onLeScan(final BluetoothDevice device, int rssi, byte[] scanRecord)
-				{
-					runOnUiThread(new Runnable()
-					{
-						@Override
-						public void run()
-						{
-							String peerName = device.getName();
-							String peerAddress = device.getAddress();
-
-							if (peerName != null && !devices.contains(peerName))
-							{
-								if (device.getUuids() != null)
-								{
-									for (ParcelUuid uuids : device.getUuids())
-									{
-										Log.i(TAG, uuids.getUuid().toString());
-									}
-								}
-								devices.add(peerName);
-								fill(peerName);
-							}
-						}
-					});
-				}
-			};
-
-	private void scanLeDevice(final boolean enable)
+	@Override
+	protected void onDestroy()
 	{
-		if (enable)
-		{
-			// Stops scanning after a pre-defined scan period.
-			mHandler.postDelayed(new Runnable()
-			{
-				@Override
-				public void run()
-				{
-					mScanning = false;
-					mBluetoothAdapter.stopLeScan(mLeScanCallback);
-				}
-			}, SCAN_PERIOD);
+		super.onDestroy();
 
-			mScanning = true;
-			mBluetoothAdapter.startLeScan(mLeScanCallback);
-			Log.i(TAG, "inicia");
-		} else
+		BluetoothAdapter bluetoothAdapter = mBluetoothManager.getAdapter();
+		if (bluetoothAdapter.isEnabled())
 		{
-			mScanning = false;
-			mBluetoothAdapter.stopLeScan(mLeScanCallback);
+			scanner.stop();
+			stopServer();
+			stopAdvertising();
 		}
+
+		unregisterReceiver(mBluetoothReceiver);
 	}
 
-	private void fill(String peerName)
+	/**
+	 * Listens for Bluetooth adapter events to enable/disable
+	 * advertising and server functionality.
+	 */
+	private BroadcastReceiver mBluetoothReceiver = new BroadcastReceiver()
 	{
-		peer_list = findViewById(R.id.list);
+		@Override
+		public void onReceive(Context context, Intent intent)
+		{
+			int state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.STATE_OFF);
+
+			switch (state)
+			{
+				case BluetoothAdapter.STATE_ON:
+					Log.w(TAG, "Bluetooth ON");
+					startAdvertising();
+					startServer();
+					break;
+				case BluetoothAdapter.STATE_OFF:
+					Log.w(TAG, "Bluetooth OFF");
+					stopServer();
+					stopAdvertising();
+					break;
+				default:
+					// Do nothing
+			}
+
+		}
+	};
+
+	private void addView(NearestScanner.BTLeDevice device)
+	{
 		FragmentManager fragmentManager = getSupportFragmentManager();
 		FragmentTransaction transaction = fragmentManager.beginTransaction();
-		PeerFragment peerFragment = PeerFragment.newInstance(peerName, "b");
+		PeerFragment peerFragment = PeerFragment.newInstance(device.getName(),
+				device.getAddress(), device.getRssi());
+		_peersView.put(device.getName(), peerFragment);
 		transaction.add(R.id.list, peerFragment);
 		transaction.commit();
 	}
+
+	private void removeView(NearestScanner.BTLeDevice device)
+	{
+		try
+		{
+			PeerFragment peerFragment = _peersView.get(device.getName());
+			assert peerFragment != null;
+			FragmentManager fragmentManager = getSupportFragmentManager();
+			FragmentTransaction transaction = fragmentManager.beginTransaction();
+			transaction.remove(peerFragment);
+			transaction.commit();
+		} catch (IllegalStateException ignore)
+		{
+			// can ocurr after onSaveInstanceState
+		}
+	}
+
+	private void updateView(NearestScanner.BTLeDevice device)
+	{
+		PeerFragment peerFragment = _peersView.get(device.getName());
+		assert peerFragment != null;
+		peerFragment.setArgAddress(device.getAddress());
+		peerFragment.setArgRssi(device.getRssi());
+	}
+
 
 	@Override
 	public void onFragmentInteraction(Uri uri)

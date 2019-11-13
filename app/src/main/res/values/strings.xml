@@ -17,4 +17,7 @@
     <string name="location_permission_granted">Location permissions already granted</string>
     <string name="my_user_name">User name</string>
     <string name="user_prefix">Jugador %d</string>
+    <string name="peer_rssi">RSSI</string>
+    <string name="peer_address">Peer address</string>
+    <string name="switch_play">Init play</string>
 </resources>

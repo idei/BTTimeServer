@@ -32,7 +32,8 @@ final class NearestScanner
 				BTLeDevice device;
 				if (!deviceHashMap.containsKey(name))
 				{
-					device = new BTLeDevice(name);
+
+					device = new BTLeDevice(result);
 					deviceHashMap.put(name, device);
 					_callback.found(device);
 				} else
@@ -111,9 +112,9 @@ final class NearestScanner
 		private int rssi;
 		private long lastScan;
 
-		BTLeDevice(String name)
+		BTLeDevice(ScanResult result)
 		{
-			this.name = name;
+			this.name = result.getDevice().getName();
 		}
 
 		String getName()

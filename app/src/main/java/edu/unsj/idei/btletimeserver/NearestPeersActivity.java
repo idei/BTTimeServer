@@ -52,7 +52,6 @@ public class NearestPeersActivity extends AppCompatActivity implements PeerFragm
 	private BluetoothManager mBluetoothManager;
 	private BluetoothGattServer mBluetoothGattServer;
 	private BluetoothLeAdvertiser mBluetoothLeAdvertiser;
-	private BluetoothAdapter mBluetoothAdapter;
 	/* Collection of notification subscribers */
 	private Set<BluetoothDevice> mRegisteredDevices = new HashSet<>();
 	// Stops scanning after 10 seconds.
@@ -66,7 +65,7 @@ public class NearestPeersActivity extends AppCompatActivity implements PeerFragm
 		@Override
 		void found(NearestScanner.BTLeDevice device)
 		{
-			// Log.w(TAG, "Found " + device.getName());
+			// Log.w(TAG, "Found " + device.getName() + " " + device.getTxPower());
 			addView(device);
 		}
 
@@ -139,19 +138,21 @@ public class NearestPeersActivity extends AppCompatActivity implements PeerFragm
 		final BluetoothManager bluetoothManager =
 				(BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
 		assert bluetoothManager != null;
-		mBluetoothAdapter = bluetoothManager.getAdapter();
+		BluetoothAdapter _mBTAdapter = bluetoothManager.getAdapter();
 
 		// Checks if Bluetooth is supported on the device.
-		if (mBluetoothAdapter == null)
+		if (_mBTAdapter == null)
 		{
 			Toast.makeText(this, R.string.error_bluetooth_not_supported, Toast.LENGTH_SHORT).show();
 			finish();
-		}
+		} else
+		{
 
-		scanner = NearestScanner.getInstance(mBluetoothAdapter.getBluetoothLeScanner(), _nearestCallback);
-		scanner.start();
-		startAdvertising();
-		startServer();
+			scanner = NearestScanner.getInstance(_mBTAdapter.getBluetoothLeScanner(), _nearestCallback);
+			scanner.start();
+			startAdvertising();
+			startServer();
+		}
 	}
 
 	@Override

@@ -4,11 +4,14 @@ import android.content.Context;
 import android.net.Uri;
 import android.os.Bundle;
 
+import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.TableLayout;
 import android.widget.TextView;
 
 
@@ -76,11 +79,43 @@ public class PeerFragment extends Fragment
 	{
 		// Inflate the layout for this fragment
 		view = inflater.inflate(R.layout.fragment_peer, container, false);
+
+
+		view.setOnTouchListener(new View.OnTouchListener()
+		{
+			public boolean onTouch(View v, MotionEvent event)
+			{
+				if (event.getAction() == MotionEvent.ACTION_DOWN)
+				{
+					setSelectionView();
+				}
+				v.performClick();
+				return true;
+			}
+		});
+
+
 		TextView peerName = view.findViewById(R.id.peer_name);
 		peerName.setText(_sName);
 		setArgAddress(_sAddress);
 		setArgRssi(_iRSSI);
 		return view;
+	}
+
+	private boolean _bSelected = false;
+
+	private void setSelectionView()
+	{
+		_bSelected = !_bSelected;
+
+		TableLayout table = view.findViewById(R.id.main_fragment);
+		if (_bSelected)
+		{
+			table.setBackgroundResource(R.drawable.nearest_selected);
+		} else
+		{
+			table.setBackgroundResource(R.drawable.shadow);
+		}
 	}
 
 	void setArgAddress(String address)
@@ -112,7 +147,7 @@ public class PeerFragment extends Fragment
 	}
 
 	@Override
-	public void onAttach(Context context)
+	public void onAttach(@NonNull Context context)
 	{
 		super.onAttach(context);
 		if (context instanceof OnFragmentInteractionListener)

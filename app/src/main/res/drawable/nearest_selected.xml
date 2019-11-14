@@ -71,7 +71,7 @@
     <!-- Background -->
     <item>
         <shape>
-            <solid android:color="@android:color/white" />
+            <solid android:color="@android:color/holo_blue_bright" />
 
             <corners android:radius="5dp" />
         </shape>

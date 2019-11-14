@@ -72,7 +72,7 @@ final class NearestScanner
 				{
 					Map.Entry<String, BTLeDevice> pair = it.next();
 					BTLeDevice dev = pair.getValue();
-					if (current - dev.getLastScan() > 5000)
+					if (current - dev.getLastScan() > 10000)
 					{
 						it.remove();
 						_callback.lost(dev);
